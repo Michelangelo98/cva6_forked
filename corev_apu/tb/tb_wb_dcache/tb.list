@@ -35,6 +35,8 @@
 ../../../common/submodules/common_cells/src/stream_demux.sv
 ../../../core/axi_adapter.sv
 ../../../common/local/util/sram.sv
+../../../common/local/util/tc_sram_wrapper.sv
+../../src/tech_cells_generic/src/rtl/tc_sram.sv
 ../../src/axi_riscv_atomics/src/axi_res_tbl.sv
 ../../src/axi_riscv_atomics/src/axi_riscv_amos.sv
 ../../src/axi_riscv_atomics/src/axi_riscv_amos_alu.sv
