@@ -263,7 +263,7 @@ tbs := $(addprefix $(root-dir), $(tbs))
 
 # RISCV asm tests and benchmark setup (used for CI)
 # there is a definesd test-list with selected CI tests
-riscv-litmus-test-dir     := /scratch/msc22h2/CHERI-Litmus/binaries/
+riscv-litmus-test-dir     := /scratch/msc22h2/cva6-litmus/binaries/
 riscv-litmus-tests-list    := ci/riscv-litmus-tests.list
 riscv-test-dir            := tmp/riscv-tests/build/isa/
 riscv-benchmarks-dir      := tmp/riscv-tests/build/benchmarks/
@@ -304,7 +304,7 @@ ifdef batch-mode
 	questa-cmd   := -do "coverage save -onexit tmp/$@.ucdb; run -a; quit -code [coverage attribute -name TESTSTATUS -concise]"
 	questa-cmd   += -do " log -r /*; run -all;"
 else
-	questa-cmd   := -do " log -r /*; do wave.do; run -all;"
+	questa-cmd   := -do " log -r /*; do ./corev_apu/tb/wave/wave_multi_core.do; run -all;"
 endif
 # we want to preload the memories
 ifdef preload
@@ -392,7 +392,7 @@ $(riscv-litmus-tests): build
 	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++none | tee tmp/riscv-litmus-tests-$@.log
 
 find-litmus:
-	find $(riscv-litmus-test-dir) -name "*.elf" | cut -b 40- > $(riscv-litmus-tests-list)
+	find $(riscv-litmus-test-dir) -name "*.elf" | cut -b 39- > $(riscv-litmus-tests-list)
 
 
 $(riscv-asm-tests): build
