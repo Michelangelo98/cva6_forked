@@ -35,7 +35,9 @@ module ariane_testharness #(
   output logic [31:0]                    exit_o
 );
 
-  localparam [7:0] hart_id = '0;
+  //localparam int unsigned NumHarts = 2;
+  localparam [7:0] hart_id0 = '0;
+  localparam [7:0] hart_id1 = 8'b1;
 
   // disable test-enable
   logic        test_en;
@@ -607,22 +609,22 @@ module ariane_testharness #(
     .spi_ss    ( )
   );
 
-  uart_bus #(.BAUD_RATE(115200), .PARITY_EN(0)) i_uart_bus (.rx(tx), .tx(rx), .rx_en(1'b1));
+  uart_bus #(.BAUD_RATE(115200*4), .PARITY_EN(0)) i_uart_bus (.rx(tx), .tx(rx), .rx_en(1'b1));
 
   // ---------------
-  // Core
+  // Core 0
   // ---------------
-  ariane_axi_soc::req_t    axi_ariane_req;
-  ariane_axi_soc::resp_t   axi_ariane_resp;
-  ariane_rvfi_pkg::rvfi_port_t rvfi;
+  ariane_axi_soc::req_t    axi_ariane0_req;
+  ariane_axi_soc::resp_t   axi_ariane0_resp;
+  ariane_rvfi_pkg::rvfi_port_t rvfi0;
 
   ariane #(
     .ArianeCfg  ( ariane_soc::ArianeSocCfg )
-  ) i_ariane (
+  ) i_ariane0 (
     .clk_i                ( clk_i               ),
     .rst_ni               ( ndmreset_n          ),
     .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
-    .hart_id_i            ( {56'h0, hart_id}    ),
+    .hart_id_i            ( {56'h0, hart_id0}    ), // change the id
     .irq_i                ( irqs                ),
     .ipi_i                ( ipi                 ),
     .time_irq_i           ( timer_irq           ),
@@ -635,38 +637,98 @@ module ariane_testharness #(
 `else
     .debug_req_i          ( debug_req_core      ),
 `endif
-    .axi_req_o            ( axi_ariane_req      ),
-    .axi_resp_i           ( axi_ariane_resp     )
+    .axi_req_o            ( axi_ariane0_req      ),
+    .axi_resp_i           ( axi_ariane0_resp     )
   );
 
-  `AXI_ASSIGN_FROM_REQ(slave[0], axi_ariane_req)
-  `AXI_ASSIGN_TO_RESP(axi_ariane_resp, slave[0])
+  `AXI_ASSIGN_FROM_REQ(slave[0], axi_ariane0_req)
+  `AXI_ASSIGN_TO_RESP(axi_ariane0_resp, slave[0])
 
   // -------------
   // Simulation Helper Functions
   // -------------
   // check for response errors
   always_ff @(posedge clk_i) begin : p_assert
-    if (axi_ariane_req.r_ready &&
-      axi_ariane_resp.r_valid &&
-      axi_ariane_resp.r.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
+    if (axi_ariane0_req.r_ready &&
+      axi_ariane0_resp.r_valid &&
+      axi_ariane0_resp.r.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
       $warning("R Response Errored");
     end
-    if (axi_ariane_req.b_ready &&
-      axi_ariane_resp.b_valid &&
-      axi_ariane_resp.b.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
+    if (axi_ariane0_req.b_ready &&
+      axi_ariane0_resp.b_valid &&
+      axi_ariane0_resp.b.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
       $warning("B Response Errored");
     end
   end
 
   rvfi_tracer  #(
-    .HART_ID(hart_id),
+    .HART_ID(hart_id0),
     .DEBUG_START(0),
     .DEBUG_STOP(0)
-  ) rvfi_tracer_i (
+  ) rvfi0_tracer_i (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
-    .rvfi_i(rvfi)
+    .rvfi_i(rvfi0)
+  );
+
+  // ---------------
+  // Core 1
+  // ---------------
+  ariane_axi_soc::req_t    axi_ariane1_req;
+  ariane_axi_soc::resp_t   axi_ariane1_resp;
+  ariane_rvfi_pkg::rvfi_port_t rvfi1;
+
+  ariane #(
+    .ArianeCfg  ( ariane_soc::ArianeSocCfg )
+  ) i_ariane1 (
+    .clk_i                ( clk_i               ),
+    .rst_ni               ( ndmreset_n          ),
+    .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
+    .hart_id_i            ( {56'h0, hart_id1}    ), // change the id
+    .irq_i                ( irqs                ),
+    .ipi_i                ( ipi                 ),
+    .time_irq_i           ( timer_irq           ),
+`ifdef RVFI_TRACE
+    .rvfi_o               ( rvfi                ),
+`endif
+// Disable Debug when simulating with Spike
+`ifdef SPIKE_TANDEM
+    .debug_req_i          ( 1'b0                ),
+`else
+    .debug_req_i          ( 1'b0                ),
+`endif
+    .axi_req_o            ( axi_ariane1_req      ),
+    .axi_resp_i           ( axi_ariane1_resp     )
+  );
+
+  `AXI_ASSIGN_FROM_REQ(slave[2], axi_ariane1_req)
+  `AXI_ASSIGN_TO_RESP(axi_ariane1_resp, slave[2])
+
+  // -------------
+  // Simulation Helper Functions
+  // -------------
+  // check for response errors
+  always_ff @(posedge clk_i) begin : p_assert2
+    if (axi_ariane1_req.r_ready &&
+      axi_ariane1_resp.r_valid &&
+      axi_ariane1_resp.r.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
+      $warning("R Response Errored");
+    end
+    if (axi_ariane1_req.b_ready &&
+      axi_ariane1_resp.b_valid &&
+      axi_ariane1_resp.b.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
+      $warning("B Response Errored");
+    end
+  end
+
+  rvfi_tracer  #(
+    .HART_ID(hart_id1),
+    .DEBUG_START(0),
+    .DEBUG_STOP(0)
+  ) rvfi1_tracer_i (
+    .clk_i(clk_i),
+    .rst_ni(rst_ni),
+    .rvfi_i(rvfi1)
   );
 
 `ifdef AXI_SVA
