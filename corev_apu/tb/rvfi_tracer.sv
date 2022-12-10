@@ -91,7 +91,7 @@ module rvfi_tracer #(
         end
       end
     end
-    if (cycles > SIM_FINISH) $finish(1);
+    if (cycles > 2*SIM_FINISH) $finish(1);
   end
 
   always_ff @(posedge clk_i or negedge rst_ni)

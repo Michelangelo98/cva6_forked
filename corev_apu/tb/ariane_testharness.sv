@@ -635,7 +635,7 @@ module ariane_testharness #(
 `ifdef SPIKE_TANDEM
     .debug_req_i          ( 1'b0                ),
 `else
-    .debug_req_i          ( debug_req_core      ),
+    .debug_req_i          ( 1'b0      ),
 `endif
     .axi_req_o            ( axi_ariane0_req      ),
     .axi_resp_i           ( axi_ariane0_resp     )

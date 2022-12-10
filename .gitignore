@@ -40,3 +40,4 @@ tb/riscv-isa-sim/
 work-*/*
 install/
 xrun_results/
+corev_apu/tb/tb_wb_dcache/covhtmlreport/
