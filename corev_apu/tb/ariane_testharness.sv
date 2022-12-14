@@ -36,8 +36,8 @@ module ariane_testharness #(
 );
 
   //localparam int unsigned NumHarts = 2;
-  localparam [7:0] hart_id0 = '0;
-  localparam [7:0] hart_id1 = 8'b1;
+  /*localparam [7:0] hart_id0 = '0;
+  localparam [7:0] hart_id1 = 8'b1;*/
 
   // disable test-enable
   logic        test_en;
@@ -281,8 +281,8 @@ module ariane_testharness #(
     .data_i     ( dm_slave_rdata            )
   );
 
-  `AXI_ASSIGN_FROM_REQ(slave[1], dm_axi_m_req)
-  `AXI_ASSIGN_TO_RESP(dm_axi_m_resp, slave[1])
+  `AXI_ASSIGN_FROM_REQ(slave[ariane_soc::NrSlaves-1], dm_axi_m_req)
+  `AXI_ASSIGN_TO_RESP(dm_axi_m_resp, slave[ariane_soc::NrSlaves-1])
 
   axi_adapter #(
     .DATA_WIDTH            ( AXI_DATA_WIDTH            ),
@@ -612,6 +612,73 @@ module ariane_testharness #(
   uart_bus #(.BAUD_RATE(115200*4), .PARITY_EN(0)) i_uart_bus (.rx(tx), .tx(rx), .rx_en(1'b1));
 
   // ---------------
+  // Cores
+  // ---------------
+  ariane_axi_soc::req_t  [0:ariane_soc::NumHarts-1]  axi_ariane_req;
+  ariane_axi_soc::resp_t [0:ariane_soc::NumHarts-1]  axi_ariane_resp;
+  ariane_rvfi_pkg::rvfi_port_t [0:ariane_soc::NumHarts-1] rvfi;
+
+  generate
+    for (genvar i = 0; i < ariane_soc::NumHarts; i++) begin
+
+      ariane #(
+        .ArianeCfg  ( ariane_soc::ArianeSocCfg )
+      ) i_ariane0 (
+        .clk_i                ( clk_i               ),
+        .rst_ni               ( ndmreset_n          ),
+        .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
+        .hart_id_i            ( {56'h0, 8'(i)}    ), // change the id
+        .irq_i                ( irqs                ),
+        .ipi_i                ( ipi                 ),
+        .time_irq_i           ( timer_irq           ),
+    `ifdef RVFI_TRACE
+        .rvfi_o               ( rvfi                ),
+    `endif
+    // Disable Debug when simulating with Spike
+    `ifdef SPIKE_TANDEM
+        .debug_req_i          ( 1'b0                ),
+    `else
+        .debug_req_i          ( 1'b0      ),
+    `endif
+        .axi_req_o            ( axi_ariane_req[i]      ),
+        .axi_resp_i           ( axi_ariane_resp[i]     )
+      );
+
+    `AXI_ASSIGN_FROM_REQ(slave[i], axi_ariane_req[i])
+    `AXI_ASSIGN_TO_RESP(axi_ariane_resp[i], slave[i])
+
+    // -------------
+    // Simulation Helper Functions
+    // -------------
+    // check for response errors
+    always_ff @(posedge clk_i) begin : p_assert
+      if (axi_ariane_req[i].r_ready &&
+        axi_ariane_resp[i].r_valid &&
+        axi_ariane_resp[i].r.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
+        $warning("R Response Errored");
+      end
+      if (axi_ariane_req[i].b_ready &&
+        axi_ariane_resp[i].b_valid &&
+        axi_ariane_resp[i].b.resp inside {axi_pkg::RESP_DECERR, axi_pkg::RESP_SLVERR}) begin
+        $warning("B Response Errored");
+      end
+    end
+
+    rvfi_tracer  #(
+      .HART_ID(8'(i)),
+      .DEBUG_START(0),
+      .DEBUG_STOP(0)
+    ) rvfi_tracer_i (
+      .clk_i(clk_i),
+      .rst_ni(rst_ni),
+      .rvfi_i(rvfi[i])
+    );
+
+
+    end
+  endgenerate
+
+  /*// ---------------
   // Core 0
   // ---------------
   ariane_axi_soc::req_t    axi_ariane0_req;
@@ -624,7 +691,7 @@ module ariane_testharness #(
     .clk_i                ( clk_i               ),
     .rst_ni               ( ndmreset_n          ),
     .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
-    .hart_id_i            ( {56'h0, hart_id0}    ), // change the id
+    .hart_id_i            ( {56'h0, 8'(0)}    ), // change the id
     .irq_i                ( irqs                ),
     .ipi_i                ( ipi                 ),
     .time_irq_i           ( timer_irq           ),
@@ -662,7 +729,7 @@ module ariane_testharness #(
   end
 
   rvfi_tracer  #(
-    .HART_ID(hart_id0),
+    .HART_ID(8'(0)),
     .DEBUG_START(0),
     .DEBUG_STOP(0)
   ) rvfi0_tracer_i (
@@ -684,7 +751,7 @@ module ariane_testharness #(
     .clk_i                ( clk_i               ),
     .rst_ni               ( ndmreset_n          ),
     .boot_addr_i          ( ariane_soc::ROMBase ), // start fetching from ROM
-    .hart_id_i            ( {56'h0, hart_id1}    ), // change the id
+    .hart_id_i            ( {56'h0, 8'(1)}    ), // change the id
     .irq_i                ( irqs                ),
     .ipi_i                ( ipi                 ),
     .time_irq_i           ( timer_irq           ),
@@ -701,8 +768,8 @@ module ariane_testharness #(
     .axi_resp_i           ( axi_ariane1_resp     )
   );
 
-  `AXI_ASSIGN_FROM_REQ(slave[2], axi_ariane1_req)
-  `AXI_ASSIGN_TO_RESP(axi_ariane1_resp, slave[2])
+  `AXI_ASSIGN_FROM_REQ(slave[1], axi_ariane1_req)
+  `AXI_ASSIGN_TO_RESP(axi_ariane1_resp, slave[1])
 
   // -------------
   // Simulation Helper Functions
@@ -722,14 +789,14 @@ module ariane_testharness #(
   end
 
   rvfi_tracer  #(
-    .HART_ID(hart_id1),
+    .HART_ID(8'(1)),
     .DEBUG_START(0),
     .DEBUG_STOP(0)
   ) rvfi1_tracer_i (
     .clk_i(clk_i),
     .rst_ni(rst_ni),
     .rvfi_i(rvfi1)
-  );
+  );*/
 
 `ifdef AXI_SVA
   // AXI 4 Assertion IP integration - You will need to get your own copy of this IP if you want
