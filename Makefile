@@ -192,7 +192,12 @@ src :=  $(filter-out core/ariane_regfile.sv, $(wildcard core/*.sv))             
 		common/submodules/common_cells/src/stream_demux.sv                           \
 		common/submodules/common_cells/src/exp_backoff.sv                            \
 		common/submodules/common_cells/src/addr_decode.sv                            \
+		common/submodules/common_cells/src/id_queue.sv                        \
+		common/submodules/common_cells/src/stream_fork.sv                        \
+		common/submodules/common_cells/src/stream_filter.sv                        \
+		common/submodules/common_cells/src/fall_through_register.sv                        \
 		common/submodules/common_cells/src/stream_register.sv                        \
+		common/submodules/common_cells/src/onehot_to_bin.sv                        \
 		corev_apu/axi/src/axi_cut.sv                                                 \
 		corev_apu/axi/src/axi_join.sv                                                \
 		corev_apu/axi/src/axi_delayer.sv                                             \
@@ -263,7 +268,7 @@ tbs := $(addprefix $(root-dir), $(tbs))
 
 # RISCV asm tests and benchmark setup (used for CI)
 # there is a definesd test-list with selected CI tests
-riscv-litmus-test-dir     := /scratch/msc22h2/cva6-litmus/binaries/
+riscv-litmus-test-dir     := ../cva6-litmus/binaries/
 riscv-litmus-tests-list    := ci/riscv-litmus-tests.list
 riscv-test-dir            := tmp/riscv-tests/build/isa/
 riscv-benchmarks-dir      := tmp/riscv-tests/build/benchmarks/
@@ -392,7 +397,7 @@ $(riscv-litmus-tests): build
 	${top_level}_optimized $(QUESTASIM_FLAGS) +permissive-off ++none | tee tmp/riscv-litmus-tests-$@.log
 
 find-litmus:
-	find $(riscv-litmus-test-dir) -name "*.elf" | cut -b 39- > $(riscv-litmus-tests-list)
+	basename -a `find $(riscv-litmus-test-dir) -name "*.elf" | sed 's/\[/\\\[/g'` > $(riscv-litmus-tests-list)
 
 
 $(riscv-asm-tests): build
