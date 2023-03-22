@@ -1,0 +1,23 @@
+1)std_cache_subsystem, Test 18 FAILED
+
+During the verification process for testing the compliance
+with the memory model through litmus tests, it was necessary 
+to use the master branch of the axi_riscv_atomics repository 
+(https://github.com/pulp-platform/axi_riscv_atomics/tree/master).
+However, when it is used, "Test 18" used to verify the correctness 
+of the standard cache subsystem alone don't work. We didn't understand why.
+Actually Test 18 isgit add  commented to avoid errors.
+
+2)FPGA synthesis
+
+Our utilizations reports use the SyncSpRamBeNx64.sv Vivado module instead
+of the xpm_memory.sv because we observed it required half the BRAM
+usage and was the same used by the CVA6 corinside the OpenPiton
+platform.
+
+3)Debug module during QuestaSim simulation
+
+The debug module was detached from ariane instances inside
+the ariane_testharnes module. It were stopping the execution
+of litmus tests and restart them from the first instruction, 
+generating errors. We didn't figured out what was the cause.
