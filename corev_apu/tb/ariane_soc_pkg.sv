@@ -17,7 +17,7 @@ package ariane_soc;
   localparam int unsigned NumSources = 30;
   localparam int unsigned MaxPriority = 7;
 
-  localparam int unsigned NumHarts = 3;
+  localparam int unsigned NumHarts = 2;
   localparam NrSlaves = NumHarts + 1; // actually masters, but slaves on the crossbar
 
   // 4 is recommended by AXI standard, so lets stick to it, do not change

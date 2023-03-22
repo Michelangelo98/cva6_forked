@@ -24,4 +24,4 @@
 // `define WB_DCACHE
 
 // write-through cache
-`define WT_DCACHE
+//`define WT_DCACHE
